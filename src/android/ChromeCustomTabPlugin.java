@@ -44,73 +44,67 @@ public class ChromeCustomTabPlugin extends CordovaPlugin{
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
 
-        switch (action) {
-            case "isAvailable":
-                callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, mCustomTabPluginHelper.isAvailable()));
-                return true;
-
-            case "show": {
-                final JSONObject options = args.getJSONObject(0);
-                final String url = options.optString("url");
-                if(TextUtils.isEmpty(url)){
-                    JSONObject result = new JSONObject();
-                    result.put("error", "expected argument 'url' to be non empty string.");
-                    PluginResult pluginResult = new PluginResult(PluginResult.Status.ERROR, result);
-                    callbackContext.sendPluginResult(pluginResult);
-                    return true;
-                }
-
-                final String toolbarColor = options.optString("toolbarColor");
-                final Boolean showDefaultShareMenuItem = options.optBoolean("showDefaultShareMenuItem");
-                String transition = "";
-                mStartAnimationBundle = null;
-                final Boolean animated = options.optBoolean("animated", true);
-                if(animated) transition = options.optString("transition", "slide");
-
-                PluginResult pluginResult;
+        if (action.contentEquals("isAvailable")) {
+            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, mCustomTabPluginHelper.isAvailable()));
+            return true;
+        } else if (action.contentEquals("show")) {
+            final JSONObject options = args.getJSONObject(0);
+            final String url = options.optString("url");
+            if(TextUtils.isEmpty(url)){
                 JSONObject result = new JSONObject();
-                if(isAvailable()) {
-                    try {
-                        this.show(url, getColor(toolbarColor), showDefaultShareMenuItem, transition);
-                        result.put("event", "loaded");
-                        pluginResult = new PluginResult(PluginResult.Status.OK, result);
-                        pluginResult.setKeepCallback(true);
-                        this.callbackContext = callbackContext;
-                    } catch (Exception ex) {
-                        result.put("error", ex.getMessage());
-                        pluginResult = new PluginResult(PluginResult.Status.ERROR, result);
-                    }
-                } else {
-                    result.put("error", "custom tabs are not available");
-                    pluginResult = new PluginResult(PluginResult.Status.ERROR, result);
-                }
+                result.put("error", "expected argument 'url' to be non empty string.");
+                PluginResult pluginResult = new PluginResult(PluginResult.Status.ERROR, result);
                 callbackContext.sendPluginResult(pluginResult);
                 return true;
             }
-            case "connectToService": {
-                if (bindCustomTabsService())
-                    callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, true));
-                else
-                    callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, "Failed to connect to service"));
-                return true;
-            }
-            case "warmUp": {
-                if (warmUp()) {
-                    callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, true));
-                } else {
-                    callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, "Failed to warm up service"));
+
+            final String toolbarColor = options.optString("toolbarColor");
+            final Boolean showDefaultShareMenuItem = options.optBoolean("showDefaultShareMenuItem");
+            String transition = "";
+            mStartAnimationBundle = null;
+            final Boolean animated = options.optBoolean("animated", true);
+            if(animated) transition = options.optString("transition", "slide");
+
+            PluginResult pluginResult;
+            JSONObject result = new JSONObject();
+            if(isAvailable()) {
+                try {
+                    this.show(url, getColor(toolbarColor), showDefaultShareMenuItem, transition);
+                    result.put("event", "loaded");
+                    pluginResult = new PluginResult(PluginResult.Status.OK, result);
+                    pluginResult.setKeepCallback(true);
+                    this.callbackContext = callbackContext;
+                } catch (Exception ex) {
+                    result.put("error", ex.getMessage());
+                    pluginResult = new PluginResult(PluginResult.Status.ERROR, result);
                 }
-                return true;
+            } else {
+                result.put("error", "custom tabs are not available");
+                pluginResult = new PluginResult(PluginResult.Status.ERROR, result);
             }
-            case "mayLaunchUrl": {
-                final String url = args.getString(0);
-                if(mayLaunchUrl(url)){
-                    callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, true));
-                } else {
-                    callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR,String.format("Failed prepare to launch url: %s", url)));
-                }
-                return true;
+            callbackContext.sendPluginResult(pluginResult);
+            return true;
+        } else if (action.contentEquals("connectToService")) {
+            if (bindCustomTabsService())
+                callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, true));
+            else
+                callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, "Failed to connect to service"));
+            return true;
+        } else if (action.contentEquals("warmUp")) {
+            if (warmUp()) {
+                callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, true));
+            } else {
+                callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, "Failed to warm up service"));
             }
+            return true;
+        } else if (action.contentEquals("mayLaunchUrl")) {
+            final String url = args.getString(0);
+            if(mayLaunchUrl(url)){
+                callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, true));
+            } else {
+                callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR,String.format("Failed prepare to launch url: %s", url)));
+            }
+            return true;
         }
         return false;
     }
@@ -140,13 +134,9 @@ public class ChromeCustomTabPlugin extends CordovaPlugin{
 
     private void addTransition(CustomTabsIntent.Builder builder, String transition) {
         final String animType = "anim";
-        switch (transition){
-            case ("slide"):
-            default:
-                mStartAnimationBundle = ActivityOptionsCompat.makeCustomAnimation(
-                        cordova.getActivity(), getIdentifier("slide_in_right", animType), getIdentifier("slide_out_left", animType)).toBundle();
-                builder.setExitAnimations(cordova.getActivity(), getIdentifier("slide_in_left", animType), getIdentifier("slide_out_right", animType));
-        }
+        mStartAnimationBundle = ActivityOptionsCompat.makeCustomAnimation(
+                cordova.getActivity(), getIdentifier("slide_in_right", animType), getIdentifier("slide_out_left", animType)).toBundle();
+        builder.setExitAnimations(cordova.getActivity(), getIdentifier("slide_in_left", animType), getIdentifier("slide_out_right", animType));
     }
 
     private void startCustomTabActivity(String url, Intent intent) {
